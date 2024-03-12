@@ -1,0 +1,46 @@
+body {
+    background-color: #333; /* Dark grey background */
+    color: white; /* White text color */
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    /* justify-content: center;  */
+    align-items: center; /* Horizontally center for its content */
+    min-height: 100vh; /* Full height of the viewport */
+    width: 375px; /* Width of common mobile devices */
+    margin: 0 auto; /* Center the container horizontally */
+    background-color: #626262;
+}
+
+
+.header{ 
+    margin-top: 10vh;
+    font-size: xx-large;
+}
+
+.intro {
+    margin-top: 2vh;
+    margin-left: 1vw;
+    margin-right: 1vw;
+}
+
+.stylish-button {
+    width: 250px;
+    height: 80px;
+    margin-top: 2vh;
+    font-size: 20px; /* Adjusts the text size */
+    color: black; /* Text color */
+    background-color: rgba(255, 255, 255, 0.5); /* Transparent white background */
+    border: 2px solid white; /* White border */
+    border-radius: 15px; /* Rounded corners */
+    cursor: pointer; /* Changes cursor to pointer on hover */
+    text-align: center; /* Ensures text is centered */
+    display: inline-block; /* Allows width and height to be set */
+    transition: all 0.3s ease; /* Smooth transition for hover effects */
+}
+
+.stylish-button:hover {
+    background-color: rgba(255, 255, 255, 0.7); /* Changes background on hover */
+}
