@@ -21,4 +21,5 @@ from game import views
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", views.index_action, name="index"), 
+    path("play", views.play_action, name="play"),
 ]

@@ -6,3 +6,9 @@ from django.shortcuts import render
 def index_action(request): 
     context = {} 
     return render(request, "game/index.html", context)
+
+
+
+def play_action(request): 
+    context = {} 
+    return render(request, "game/play.html", context) 

@@ -14,36 +14,13 @@
         <div class="app-container">
             <div class="header" id="id_header_div">
                 <div class="header-text">
-                    MaGomoku
+                    Play MaGomoku
                 </div>
                 <div class="navigation-bar">
                     {% block navigation-bar %}
                     {% endblock %}
                 </div>
             </div>
-
-            <div class="intro">
-                MaGomoku is an online and physical Gomoku Game that's revolutionary.
-            </div> 
-
-            <form action="{% url 'play' %}" method="get">
-                <button class="stylish-button"> 
-                    Play Game
-                </button> 
-            </form>
-
-            <form>
-                <button class="stylish-button"> 
-                    View History
-                </button>     
-            </form>
-            
-            
-            <form>
-                <button class="stylish-button"> 
-                    Setting
-                </button>     
-            </form>
 
             <div class="page-title">
                 {% block page-name %}
