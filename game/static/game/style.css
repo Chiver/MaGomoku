@@ -9,7 +9,7 @@ body {
     /* justify-content: center;  */
     align-items: center; /* Horizontally center for its content */
     min-height: 100vh; /* Full height of the viewport */
-    width: 375px; /* Width of common mobile devices */
+    width: 450px; /* Width of common mobile devices */
     margin: 0 auto; /* Center the container horizontally */
     background-color: #626262;
 }
@@ -43,4 +43,41 @@ body {
 
 .stylish-button:hover {
     background-color: rgba(255, 255, 255, 0.7); /* Changes background on hover */
+}
+
+
+#gomokuBoard {
+    display: grid;
+    grid-template-columns: repeat(9, 40px);
+    grid-template-rows: repeat(9, 40px);
+    gap: 0px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.cell {
+    width: 40px;
+    height: 40px;
+    background-color: #d4d4d4;
+    border: 1px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.piece {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.black {
+    background-color: black;
+}
+
+.white {
+    background-color: white;
 }
