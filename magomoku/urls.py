@@ -23,4 +23,5 @@ urlpatterns = [
     path("", views.index_action, name="index"), 
     path("play", views.play_action, name="play"),
     path("move_piece_action", views.move_piece_action, name="move"),
+    # path("update_piece_action", views.update_piece_action, name="update") 
 ]

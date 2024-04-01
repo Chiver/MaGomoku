@@ -4,7 +4,6 @@ from django.shortcuts import render
 import requests
 from django.http import JsonResponse
 
-
 def move_piece_action(request):
     x = request.GET.get('x', 0)  # Default to 0 if not provided
     y = request.GET.get('y', 0)  # Default to 0 if not provided

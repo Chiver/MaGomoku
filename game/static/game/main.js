@@ -180,7 +180,34 @@ function isPlacementValid(i, isBlackTurn){
     return isValid; 
 }
 
-
+function checkUpdateFromBoard(){
+    $.ajax({
+        url: 'http://localhost:5000/check_update_piece',
+        type: 'GET',
+        dataType: 'json', // Expect JSON data in response
+        success: function(data) {
+            console.log("Data fetched successfully:", data);
+            
+            if (data.is_ready) {
+                console.log("is_ready:", data.is_ready); // True
+                console.log("x:", data.x); // 1
+                console.log("y:", data.y); // 3
+                if (data.is_ready){
+                    let i = x * BOARD_SIZE + y; 
+                    placePiece(i); 
+                } else {
+                    console.log("Endpoint not ready, refetch in 1 sec");
+                }
+            } else {
+                console.log("Data not ready yet. Wait for callback"); 
+            } 
+        }, 
+        error: function(xhr, status, error) {
+            console.error(error);
+            // Handle error
+        }
+    });
+}
 
 function buildBoardCallBack() {
     const board = document.getElementById("gomokuBoard");
