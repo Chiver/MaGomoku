@@ -168,7 +168,7 @@ def read_val_callback(data):
     x, y = calc_xy(data[CB_PIN])
     updateBoard(x,y,data[CB_VALUE])
     #serial_board()
-    print(f"Pin: {data[CB_PIN]} Val: {data[CB_VALUE]}")
+    #print(f"Pin: {data[CB_PIN]} Val: {data[CB_VALUE]}")
 
 
 def the_callback(data):
@@ -240,12 +240,13 @@ def stepY(board, num, speed):
     step_relative(board, motorY, num * 495, speed)
 
 
-@app.route('/movepiece')
-def move(x, y, speed):
+@app.route('/move_piece')
+def move():
 
     x = request.args.get('x', 0)  # Default to 0 if not provided
     y = request.args.get('y', 0)  # Default to 0 if not provided
-
+    x, y = int(x), int(y)
+    speed = 800
     electroMagnet_on()
 
     stepX(board, x-1, speed)
@@ -296,27 +297,3 @@ actionIndex= 0
 
 
 app.run(port=5000)
-while True:
-    try:
-        # start the main function
-        """
-        dir = int(input("next "))
-        action = actionQ[actionIndex]
-        dist = distance[actionIndex]0
-
-        if action == 0:
-            stepX(board, dist, 800)
-        else:
-            stepY(board,dist, 800)
-        """
-        
-        x, y = map(int, input("Enter input:").split())
-        
-        move(x,y, 800) 
-
-        
-        
-        #resetX(board)
-    except KeyboardInterrupt:
-        board.shutdown()
-        sys.exit(0)
