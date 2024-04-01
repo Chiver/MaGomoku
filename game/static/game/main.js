@@ -35,26 +35,21 @@ function movePiece(row, col){
 }
 
 
-function updateColor(i){
-    let piece = document.getElementById(`piece_${i}`);
-    let currColor = isBlackTurn ? "black" : "white"
-    piece.className = `piece ${currColor}` 
-}
 
-function placePiece(cell, i) {
+function placePiece(i) {
     if (!isPlacementValid(i, isBlackTurn)){
         console.log("Placement is not valid"); 
         return; 
     }
-    const piece = document.createElement("div");
+    const piece = document.getElementById(`piece_${i}`);
     let currColor = isBlackTurn ? "black" : "white"
     piece.className = `piece ${currColor}`;
-    piece.id = `piece_${i}`;
-    cell.appendChild(piece);
+    
     boardData.push({
         index: i, 
         color: currColor
     }); 
+
     isBlackTurn = !isBlackTurn; // Switch turns
     
     if(gameState != "playing"){
@@ -185,15 +180,23 @@ function isPlacementValid(i, isBlackTurn){
     return isValid; 
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+
+
+function buildBoardCallBack() {
     const board = document.getElementById("gomokuBoard");
 
     // Generate the 9x9 grid
     for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
         const cell = document.createElement("div");
         cell.className = "cell";
+        const piece = document.createElement("div");
+        piece.className = `piece`;
+        piece.id = `piece_${i}`;
+        cell.appendChild(piece);
         // cell.addEventListener("click", () => placePiece(cell, i), { once: true });
-        cell.addEventListener("click", () => placePiece(cell, i));
+        cell.addEventListener("click", () => placePiece(i));
         board.appendChild(cell);
     }
-});
+}
+
+document.addEventListener("DOMContentLoaded", buildBoardCallBack);

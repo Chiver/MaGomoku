@@ -72,6 +72,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    background-color: #d4d4d4;
 }
 
 .black {
