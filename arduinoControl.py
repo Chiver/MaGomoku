@@ -266,6 +266,8 @@ def move():
 
     electroMagnet_off()
 
+    time.wait(0.5)
+
     reset(board, x, y, 800)
 
     return jsonify({'x': x, 'y': y, 'message': 'Response from Flask with parameters!'})
