@@ -22,4 +22,5 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", views.index_action, name="index"), 
     path("play", views.play_action, name="play"),
+    path("move_piece_action", views.move_piece_action, name="move"),
 ]
