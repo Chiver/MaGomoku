@@ -15,6 +15,30 @@ function refreshBoard(){
     gameState = "idle"; 
 }
 
+function movePiece(x, y){
+    console.log("WOW");
+    $.ajax({
+        url: `/move_piece_action?x=${x}&y=${y}`,
+        type: 'GET',
+        contentType: "application/json",
+        dataType: "json",
+        success: function(data) {
+            console.log(data);
+            // Update the page based on the response if needed
+        },
+        error: function(xhr, status, error) {
+            console.error(error);
+            // Handle error
+        }
+    });
+
+    // $('#movePiece').click(function(event) {
+    //     event.preventDefault(); // Prevent the default form action
+
+        
+    // });
+}
+
 function placePiece(cell, i) {
     if (!isPlacementValid(i, isBlackTurn)){
         console.log("Placement is not valid"); 
