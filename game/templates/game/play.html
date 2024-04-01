@@ -27,12 +27,14 @@
             <div id="gomokuBoard"></div>
 
 
-            <form action="{% url 'move' %}" method="get">
+            {% comment %} <form action="{% url 'move' %}" method="get">
                 <input type="text" name="x" placeholder="Enter X value">
                 <input type="text" name="y" placeholder="Enter Y value">
                 <button type="submit">Move Piece</button>
             </form>
-
+             {% endcomment %}
+            <button onclick="movePiece(1,1)">Move Piece</button>
+            
             <div class="page-title">
                 {% block page-name %}
                 {% endblock %}
