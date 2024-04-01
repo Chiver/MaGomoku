@@ -62,7 +62,7 @@ mem = np.zeros(shape=(9,9), dtype="float")
 
 
 TRESHOLD = [
-    [(178, 183), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
+    [(173, 177), (169, 173), (174, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
     [(180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
     [(180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
     [(180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
@@ -144,6 +144,12 @@ location_dict = {
     (3,0): (1,0)
 }
 
+
+def helper():
+    board2.enable_analog_reporting(0)
+    time.sleep(.1)
+    board2.disable_analog_reporting(0)
+
 def updateBoard(x_loc, y_loc, value):
     """
     if value >= BLACK_THRESHOLD[x_loc][y_loc]:
@@ -168,7 +174,7 @@ def read_val_callback(data):
     x, y = calc_xy(data[CB_PIN])
     updateBoard(x,y,data[CB_VALUE])
     #serial_board()
-    #print(f"Pin: {data[CB_PIN]} Val: {data[CB_VALUE]}")
+    print(f"Pin: {data[CB_PIN]} Val: {data[CB_VALUE]}")
 
 
 def the_callback(data):
@@ -255,6 +261,8 @@ def move():
 
     electroMagnet_off()
 
+    reset(board, 800)
+
     return jsonify({'x': x, 'y': y, 'message': 'Response from Flask with parameters!'})
 
 
@@ -265,17 +273,26 @@ def electroMagnet_on():
 def electroMagnet_off():
     board2.digital_write(ELECTROMAGNET, 0)
 
+    
+
 
 
 # instantiate telemetrix
 board = telemetrix.Telemetrix(arduino_instance_id = 1)
 board2 = telemetrix.Telemetrix(arduino_instance_id= 2)
 
-board2.set_pin_mode_analog_input(0 , differential=2, callback=read_val_callback)
-#board2.set_pin_mode_analog_input(1 , differential=3, callback=read_val_callback)
-#board2.set_pin_mode_analog_input(2 , differential=3, callback=read_val_callback)
+board2.set_pin_mode_analog_input(0 , differential=12, callback=read_val_callback)
+board2.set_pin_mode_analog_input(1 , differential=12, callback=read_val_callback)
+board2.set_pin_mode_analog_input(2 , differential=12, callback=read_val_callback)
+
+
 
 board2.set_pin_mode_digital_output(ELECTROMAGNET)
+
+
+
+
+
 
 
 
@@ -296,4 +313,9 @@ actionIndex= 0
 
 
 
-app.run(port=5000)
+#app.run(port=5000)
+
+while True:
+    num = input("Your input:")
+    helper()
+    
