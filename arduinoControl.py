@@ -23,6 +23,7 @@ from flask import Flask, jsonify, request
 app = Flask(__name__)
 
 
+import requests
 from telemetrix import telemetrix
 
 """
@@ -124,6 +125,7 @@ x = 0
 y = 0
 exit_flag = 0
 channel = 0
+initFlag = False
 #y = 0
 
 
@@ -170,11 +172,20 @@ def calc_xy(pin):
 
 
 def read_val_callback(data):
-    date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(data[CB_TIME]))
-    x, y = calc_xy(data[CB_PIN])
-    updateBoard(x,y,data[CB_VALUE])
-    #serial_board()
-    print(f"Pin: {data[CB_PIN]} Val: {data[CB_VALUE]}")
+    global initFlag
+
+    if initFlag:
+        x, y = calc_xy(data[CB_PIN])
+        updateBoard(x,y,data[CB_VALUE])
+        #serial_board()
+
+        #django_url = 'http://localhost:8000/update_piece'
+        #response = requests.get(django_url, params={'x': x, 'y': y, "color": "white"})
+        #print(response)
+        #print(f"Pin: {data[CB_PIN]} Val: {data[CB_VALUE]}")
+
+    if data[CB_PIN] == 2:
+        initFlag = True
 
 
 def the_callback(data):
@@ -226,14 +237,8 @@ def step_relative(the_board:telemetrix, motor_num, target, speed):
     exit_flag = 0
     
 
+def reset(board, x, y, speed):
     
-
-    
-
-def reset(board, speed):
-    global x
-    global y
-    print(f"x is {x}, y is {y}")
     step_relative(board, motorX, -x * 495, speed)
     step_relative(board, motorY, -y * 495, speed)
     x = 0
@@ -251,7 +256,7 @@ def move():
 
     x = request.args.get('x', 0)  # Default to 0 if not provided
     y = request.args.get('y', 0)  # Default to 0 if not provided
-    x, y = int(x), int(y)
+    x, y = int(x) * 2, int(y) * 2
     speed = 800
     electroMagnet_on()
 
@@ -261,9 +266,33 @@ def move():
 
     electroMagnet_off()
 
-    reset(board, 800)
+    reset(board, x, y, 800)
 
     return jsonify({'x': x, 'y': y, 'message': 'Response from Flask with parameters!'})
+
+
+
+def moveLocal(x, y):
+
+    speed = 800
+
+    x, y = int(x) , int(y)
+
+    x*=2
+    y*=2
+
+    speed = 800
+    electroMagnet_on()
+
+    print(f"x is {x}, y is {y}")
+
+    stepX(board, x-1, speed)
+    stepY(board, y, speed)
+    stepX(board, 1, speed)
+
+    electroMagnet_off()
+
+
 
 
 
@@ -281,9 +310,9 @@ def electroMagnet_off():
 board = telemetrix.Telemetrix(arduino_instance_id = 1)
 board2 = telemetrix.Telemetrix(arduino_instance_id= 2)
 
-board2.set_pin_mode_analog_input(0 , differential=12, callback=read_val_callback)
-board2.set_pin_mode_analog_input(1 , differential=12, callback=read_val_callback)
-board2.set_pin_mode_analog_input(2 , differential=12, callback=read_val_callback)
+#board2.set_pin_mode_analog_input(0 , differential=16, callback=read_val_callback)
+#board2.set_pin_mode_analog_input(1 , differential=5, callback=read_val_callback)
+#board2.set_pin_mode_analog_input(2 , differential=15, callback=read_val_callback)
 
 
 
@@ -305,17 +334,15 @@ motorX = board.set_pin_mode_stepper(interface=1, pin1=X_PULSE_PIN,
 motorY = board.set_pin_mode_stepper(interface=1, pin1=Y_PULSE_PIN,
                                                  pin2=Y_DIRECTION_PIN)
 
-actionQ = [0,1,0,1]
-distance = [3, 3, -3, -3]
-actionIndex= 0
+
+
+app.run(port=5000)
+
+"""
 
 
 
 
 
-#app.run(port=5000)
-
-while True:
-    num = input("Your input:")
-    helper()
+"""
     
