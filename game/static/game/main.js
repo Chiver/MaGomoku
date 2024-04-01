@@ -15,15 +15,16 @@ function refreshBoard(){
     gameState = "idle"; 
 }
 
-function movePiece(x, y){
-    console.log("WOW");
+
+function movePiece(row, col){
+    console.log("Calling MovePiece");
     $.ajax({
-        url: `/move_piece_action?x=${x}&y=${y}`,
+        url: `/move_piece_action?x=${row}&y=${col}`,
         type: 'GET',
         contentType: "application/json",
         dataType: "json",
         success: function(data) {
-            console.log(data);
+            console.log(data);         
             // Update the page based on the response if needed
         },
         error: function(xhr, status, error) {
@@ -31,12 +32,13 @@ function movePiece(x, y){
             // Handle error
         }
     });
+}
 
-    // $('#movePiece').click(function(event) {
-    //     event.preventDefault(); // Prevent the default form action
 
-        
-    // });
+function updateColor(i){
+    let piece = document.getElementById(`piece_${i}`);
+    let currColor = isBlackTurn ? "black" : "white"
+    piece.className = `piece ${currColor}` 
 }
 
 function placePiece(cell, i) {
@@ -47,6 +49,7 @@ function placePiece(cell, i) {
     const piece = document.createElement("div");
     let currColor = isBlackTurn ? "black" : "white"
     piece.className = `piece ${currColor}`;
+    piece.id = `piece_${i}`;
     cell.appendChild(piece);
     boardData.push({
         index: i, 
@@ -57,9 +60,12 @@ function placePiece(cell, i) {
     if(gameState != "playing"){
         gameState = "playing"; 
     }
+    
     // Check for winning 
     let r = Math.trunc(i / BOARD_SIZE); 
     let c = i % BOARD_SIZE; 
+    // Call remove to move gantry
+    movePiece(r, c); 
     let msg = document.getElementById("game-message"); 
     if (checkWinningState(r, c, currColor)){
         gameState = "win";
@@ -68,6 +74,7 @@ function placePiece(cell, i) {
     } else {
         msg.innerText = `Player ${isBlackTurn ? "white" : "black"} is playing`; 
     }
+    
 }
 
 
