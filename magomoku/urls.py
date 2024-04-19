@@ -23,5 +23,7 @@ urlpatterns = [
     path("", views.index_action, name="index"), 
     path("play", views.play_action, name="play"),
     path("move_piece_action", views.move_piece_action, name="move"),
+    path("physical_placement_action", views.physical_placement_action, name="physical"), 
+    path("fetch_physical_move_action", views.fetch_physical_move_action, name="fetch")
     # path("update_piece_action", views.update_piece_action, name="update") 
 ]

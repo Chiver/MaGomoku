@@ -5,6 +5,7 @@ let isBlackTurn = true; // Black starts
 let boardData = []; 
 let round = 0; 
 let gameState = "idle"; 
+let isComputerBlack = true; 
 const BOARD_SIZE = 9; 
 
 function refreshBoard(){
@@ -36,7 +37,11 @@ function movePiece(row, col){
 
 
 
-function placePiece(i) {
+function placePiece(i, remote=false) {
+    if ((remote && isBlackTurn && isComputerBlack) || 
+        (!remote && !isBlackTurn && isComputerBlack)) {
+        return; 
+    }
     if (!isPlacementValid(i, isBlackTurn)){
         console.log("Placement is not valid"); 
         return; 
@@ -180,6 +185,9 @@ function isPlacementValid(i, isBlackTurn){
     return isValid; 
 }
 
+/**
+ * @deprecated This function is previously used to periodically check if the board has an update. 
+ */
 function checkUpdateFromBoard(){
     $.ajax({
         url: 'http://localhost:5000/check_update_piece',
@@ -205,6 +213,49 @@ function checkUpdateFromBoard(){
         error: function(xhr, status, error) {
             console.error(error);
             // Handle error
+        }
+    });
+}
+
+function isValidPlacement(data){
+    if (data.status === "false"){
+        return false;
+    }
+    if (
+        (isBlackTurn && data.curr === "WHITE") || 
+        (!isBlackTurn && data.curr === "BLACK" || 
+        (data.x < 0 || data.x >= 8 || data.y < 0 || data.y >= 8))
+    ){
+        return false; 
+    }
+    let i = data.x * BOARD_SIZE + data.y; 
+    return isPlacementValid(i, isBlackTurn); 
+}
+
+function fetchMoveAndUpdateBoard() {
+    $.ajax({
+        url: "/fetch_physical_move_action",  // Use the correct path as defined in urls.py
+        type: "GET",  // Method type
+        dataType: "json",  // Expected data type from the server
+        success: function(data) {
+            if (data.status === "true") {
+                // Here you can call your function to update the game board with the new move
+                // For example, updateBoard(data.x, data.y, data.curr);
+                if(isValidPlacement(data)){
+                    let i = data.x * BOARD_SIZE + data.y; 
+                    placePiece(i, remote=true); 
+                    console.log("New move:", data);
+                    return; 
+                } else {
+                    console.log("Invalid Move: ", data);
+                }
+                    
+            } else {
+                console.log("No new moves.");
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error("Error fetching move:", status, error);
         }
     });
 }
