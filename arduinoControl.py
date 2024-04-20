@@ -23,7 +23,6 @@ from flask import Flask, jsonify, request
 app = Flask(__name__)
 
 
-import requests
 from telemetrix import telemetrix
 
 """
@@ -55,15 +54,21 @@ const int DirZ = 7;
 
 """
 
-MUX_SELECT_PINS = [0, 1, 2, 3]
+MUX_SELECT_PINS = [7, 6, 5, 4]
 
 
 
-mem = np.zeros(shape=(9,9), dtype="float")
+VAL_DEFAULT = [0 ]
+MUX_READ_VAL_TIME = [0]
+MUX_VAL_ACCUMULATE = [0]
+
+
+BoardMem = np.zeros(shape=(9,9), dtype="int")
+
 
 
 TRESHOLD = [
-    [(173, 177), (169, 173), (174, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
+    [(178, 183), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
     [(180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
     [(180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
     [(180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
@@ -93,9 +98,10 @@ CB_PIN = 1
 CB_VALUE = 2
 CB_TIME = 3
 
+
 # x y offset from feeding point to grid 0 0 
-X_OFFSET = 495
-Y_OFFSET = 495
+X_OFFSET = 0
+Y_OFFSET = 0
 
 
 
@@ -115,10 +121,6 @@ X_DIRECTION_PIN = 5
 Y_PULSE_PIN = 3
 Y_DIRECTION_PIN = 6
 
-
-Z_PULSE_PIN = 4
-Z_DIRECTION_PIN = 7
-
 ENABLE_PIN = 8
 
 # flag to keep track of the number of times the callback
@@ -128,7 +130,6 @@ x = 0
 y = 0
 exit_flag = 0
 channel = 0
-initFlag = False
 #y = 0
 
 
@@ -143,31 +144,12 @@ BLACK = 2
 #pin, channel to x y pair
 
 location_dict = {
-    (0,0): (8,2),
-    (1,0): (8,1),
-    (2,0): (8,0),
+    (0,0): (0,0),
+    (1,0): (1,0),
+    (2,0): (1,0),
+    (3,0): (1,0)
 }
 
-
-def helper():
-    board2.enable_analog_reporting(0)
-    time.sleep(.1)
-    board2.disable_analog_reporting(0)
-
-def updateBoard(x_loc, y_loc, value):
-    """
-    if value >= BLACK_THRESHOLD[x_loc][y_loc]:
-        mem[x_loc][y_loc] = 2
-    elif value >= WHITE_THRESHOLD[x_loc][y_loc]:
-        mem[x_loc][y_loc] = 1
-    else:
-        mem[x_loc][y_loc] = 0
-    """
-    global is_update_ready
-    global update_coordination
-
-    is_update_ready = True
-    update_coordination = (x_loc, y_loc)
     
 
 def calc_xy(pin):
@@ -177,17 +159,17 @@ def calc_xy(pin):
 
 
 def read_val_callback(data):
-    global initFlag
+    #date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(data[CB_TIME]))
+    #x, y = calc_xy(data[CB_PIN])
 
-    if initFlag:
-        x, y = calc_xy(data[CB_PIN])
-        updateBoard(x,y,data[CB_VALUE])
-        #serial_board()
-        print(f"Pin: {data[CB_PIN]} Val: {data[CB_VALUE]}")
+    global MUX_READ_VAL_TIME 
+    global MUX_VAL_ACCUMULATE
 
-    if data[CB_PIN] == 2:
-        initFlag = True
+    MUX_READ_VAL_TIME[data[CB_PIN]] += 1
+    MUX_VAL_ACCUMULATE[data[CB_PIN]] += data[CB_VALUE]
 
+    #PRINT OUT INFO
+    print(f"Pin: {data[CB_PIN]} Val: {data[CB_VALUE]}")
 
 
 
@@ -240,72 +222,33 @@ def step_relative(the_board:telemetrix, motor_num, target, speed):
     exit_flag = 0
     
 
-def reset(board, x, y, speed):
     
-    stepX(board, -1, speed, 0)
-    step_relative(board, motorY, -y * 495 - Y_OFFSET, speed)
-    step_relative(board, motorX, (-x+1) * 495 - X_OFFSET, speed)
+
+    
+
+def reset(board, speed):
+    global x
+    global y
+    print(f"x is {x}, y is {y}")
+    step_relative(board, motorX, -x * 495, speed)
+    step_relative(board, motorY, -y * 495, speed)
     x = 0
     y = 0
 
-def stepX(board, num, speed, offset):
-    step_relative(board, motorX, num * 495 + offset , speed)
+def stepX(board, num, speed):
+    step_relative(board, motorX, num * 495, speed)
 
-def stepY(board, num, speed, offset):
-    step_relative(board, motorY, num * 495 + offset, speed)
+def stepY(board, num, speed):
+    step_relative(board, motorY, num * 495, speed)
 
 
-is_update_ready = False 
-update_coordination = (-1, -1)
-
-@app.route("/check_update_piece")
-def check_update():
-    global is_update_ready
-    global update_coordination
-    a, b = is_update_ready, update_coordination
-    is_update_ready = False
-    update_coordination = (-1,-1)
-
-    return jsonify({'is_Ready': a, 'x': b[0], 'y': b[1]})
-    
-@app.route('/move_piece')
-def move():
+@app.route('/movepiece')
+def move(x, y, speed):
 
     x = request.args.get('x', 0)  # Default to 0 if not provided
     y = request.args.get('y', 0)  # Default to 0 if not provided
-    x, y = int(x) * 2, int(y) * 2
 
-    x, y = y,x
-    speed = 800
     electroMagnet_on()
-
-    stepX(board, x-1, speed, X_OFFSET)
-    stepY(board, y , speed, Y_OFFSET)
-    stepX(board, 1, speed, 0)
-
-    electroMagnet_off()
-
-    time.sleep(0.5)
-
-    reset(board, x, y, 800)
-
-    return jsonify({'x': x, 'y': y, 'message': 'Response from Flask with parameters!'})
-
-
-
-def moveLocal(x, y):
-
-    speed = 800
-
-    x, y = int(x) , int(y)
-
-    x*=2
-    y*=2
-
-    speed = 800
-    electroMagnet_on()
-
-    print(f"x is {x}, y is {y}")
 
     stepX(board, x-1, speed)
     stepY(board, y, speed)
@@ -313,7 +256,7 @@ def moveLocal(x, y):
 
     electroMagnet_off()
 
-
+    return jsonify({'x': x, 'y': y, 'message': 'Response from Flask with parameters!'})
 
 
 
@@ -323,50 +266,196 @@ def electroMagnet_on():
 def electroMagnet_off():
     board2.digital_write(ELECTROMAGNET, 0)
 
-    
-
 
 
 # instantiate telemetrix
-board = telemetrix.Telemetrix(arduino_instance_id = 1)
+#board = telemetrix.Telemetrix(arduino_instance_id = 1)
 board2 = telemetrix.Telemetrix(arduino_instance_id= 2)
 
-board2.set_pin_mode_analog_input(0 , differential=16, callback=read_val_callback)
-board2.set_pin_mode_analog_input(1 , differential=5, callback=read_val_callback)
-board2.set_pin_mode_analog_input(2 , differential=15, callback=read_val_callback)
-
-
+board2.set_pin_mode_analog_input(0 , differential=0, callback=read_val_callback)
+#board2.set_pin_mode_analog_input(1 , differential=0, callback=read_val_callback)
+#board2.set_pin_mode_analog_input(2 , differential=3, callback=read_val_callback)
 
 board2.set_pin_mode_digital_output(ELECTROMAGNET)
 
+for select in MUX_SELECT_PINS:
+    board2.set_pin_mode_digital_output(select)
 
 
 
 
 
+def iterate():
+
+    global BoardMem
+    global MUX_VAL_ACCUMULATE
+    global MUX_READ_VAL_TIME
+   
+
+    for i in range(5, 6):
+        sel_0 = i & 1
+        sel_1 = (i >>1) & 1
+        sel_2 = (i >>2) & 1
+        sel_3 = (i >>3) & 1
+
+        board2.digital_write(MUX_SELECT_PINS[0], sel_0)
+        board2.digital_write(MUX_SELECT_PINS[1], sel_1)
+        board2.digital_write(MUX_SELECT_PINS[2], sel_2)
+        board2.digital_write(MUX_SELECT_PINS[3], sel_3)
 
 
+        print(f"Selecting {sel_0} {sel_1} {sel_2} {sel_3} ")
+
+        board2.enable_analog_reporting(0)
+        #board2.enable_analog_reporting(1)
+        #board2.enable_analog_reporting(2)
+        
+        #board2.enable_analog_reporting(3)
+        #board2.enable_analog_reporting(4)
+        #board2.enable_analog_reporting(5)
+
+        time.sleep(0.1)
+
+        board2.disable_analog_reporting(0)
+        #board2.disable_analog_reporting(1)
+        #board2.disable_analog_reporting(2)
+        #board2.disable_analog_reporting(3)
+        #board2.disable_analog_reporting(4)
+        #board2.disable_analog_reporting(5)
+
+        
+        #j = 0
+        #x, y = iteration_to_sesnor(i, j)
+        #print(f"x: {x}, y:{y}")
+
+        
+        for j in range(len(MUX_VAL_ACCUMULATE)):
+            avg = round(MUX_READ_VAL_TIME[j] / MUX_READ_VAL_TIME[j])
+            x, y = iteration_to_sesnor(i, j)
+            black_upper, black_lower = TRESHOLD[x][y]
+            prev = BoardMem[x][y]
+            verifyCell(avg, prev, black_lower, black_upper)
+            BoardMem[x][y] = avg
+            print(f"x: {x}, y:{y}, avg:{avg}")
+           
+        #MUX_VAL_ACCUMULATE = VAL_DEFAULT
+        #MUX_READ_VAL_TIME = VAL_DEFAULT
+
+        time.sleep(5)
 
 
-motorX = board.set_pin_mode_stepper(interface=1, pin1=X_PULSE_PIN,
-                                                 pin2=X_DIRECTION_PIN)
+        
+            
+            
+            
 
-
-motorY = board.set_pin_mode_stepper(interface=1, pin1=Y_PULSE_PIN,
-                                                 pin2=Y_DIRECTION_PIN)
-
-motorZ = board.set_pin_mode_stepper(interface=1, pin1=Z_PULSE_PIN,
-                                                 pin2=Z_DIRECTION_PIN)
-
-
-
-app.run(port=5000)
 
 """
 
+0 stands for nothing ~200 in raw
+1 stands for black ~176 in raw
+2 stands for white ~174 in raw
+webapp
 
-
-
-
+Responsible for sending message to 
 """
+def verifyCell(avg, prev, black_lower, black_upper):
+
+    if prev == 0:
+        pass
+
+    elif avg > black_upper:
+        if prev >= black_lower and prev <= black_upper:
+            # nothing to black
+            pass
+        else:
+            # nothing to white
+            pass
+    elif avg >= black_lower:
+        if prev > black_upper:
+            # black to nothing
+            pass
+        elif prev < black_lower:
+            # nothing to white
+            pass
+    else:
+        if prev > black_upper:
+            # white  to nothing
+            pass
+        elif prev >= black_lower:
+            # white to black
+            pass
+        
+
+
+
+
+
+
+
+def iteration_to_sesnor(iteration, mux_num):
+    if mux_num % 2 == 1:
+        if iteration in range(0,8):
+            return (2 + 3 * ((mux_num // 2) - 1), iteration) 
+        else:
+            return (1 + 3 * ((mux_num // 2) - 1), iteration - 9) 
+    else:
+        if iteration == 13:
+            return (-1, -1)
+        elif iteration in range(4, 13):
+                return (mux_num * 3, iteration - 4)
+        else:
+                return (mux_num * 3 + 1, iteration + 5)
+        
+        
+
+
     
+
+
+
+
+
+#motorX = board.set_pin_mode_stepper(interface=1, pin1=X_PULSE_PIN,
+ #                                                pin2=X_DIRECTION_PIN)
+
+
+#motorY = board.set_pin_mode_stepper(interface=1, pin1=Y_PULSE_PIN,
+  #                                               pin2=Y_DIRECTION_PIN)
+
+actionQ = [0,1,0,1]
+distance = [3, 3, -3, -3]
+actionIndex= 0
+
+
+
+
+
+
+
+#app.run(port=5000)
+while True:
+    try:
+        # start the main function
+        """
+        dir = int(input("next "))
+        action = actionQ[actionIndex]
+        dist = distance[actionIndex]0
+
+        if action == 0:
+            stepX(board, dist, 800)
+        else:
+            stepY(board,dist, 800)
+        """
+        
+        #x, y = map(int, input("Enter input:").split())
+        
+        #move(x,y, 800) 
+
+        iterate()
+
+        
+        
+        #resetX(board)
+    except KeyboardInterrupt:
+        sys.exit(0)
