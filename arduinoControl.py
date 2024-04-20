@@ -395,17 +395,37 @@ def verifyCell(avg, prev, black_lower, black_upper):
 
 def iteration_to_sesnor(iteration, mux_num):
     if mux_num % 2 == 1:
-        if iteration in range(0,8):
-            return (2 + 3 * ((mux_num // 2) - 1), iteration) 
+        if iteration in range(0,9):
+            if mux_num == 1:
+                return (2, iteration)
+            elif mux_num == 3:
+                return (5, iteration)
+            elif mux_num == 5:
+                return (8, iteration)
         else:
-            return (1 + 3 * ((mux_num // 2) - 1), iteration - 9) 
+            if mux_num == 1:
+                return (1, iteration - 9)
+            elif mux_num == 3:
+                return (4, iteration - 9)
+            elif mux_num == 5:
+                return (7, iteration - 9)
     else:
         if iteration == 13:
             return (-1, -1)
         elif iteration in range(4, 13):
-                return (mux_num * 3, iteration - 4)
+            if mux_num == 0:
+                return (0, iteration - 4)
+            elif mux_num == 2:
+                return (3, iteration - 4)
+            elif mux_num == 4:
+                return (6, iteration - 4)
         else:
-                return (mux_num * 3 + 1, iteration + 5)
+            if mux_num == 0:
+                return (1, iteration + 5)
+            elif mux_num == 2:
+                return (4, iteration + 5)
+            elif mux_num == 4:
+                return (7, iteration + 5)
         
         
 
