@@ -1,20 +1,3 @@
-"""
- Copyright (c) 2022 Alan Yorinks All rights reserved.
-
- This program is free software; you can redistribute it and/or
- modify it under the terms of the GNU AFFERO GENERAL PUBLIC LICENSE
- Version 3 as published by the Free Software Foundation; either
- or (at your option) any later version.
- This library is distributed in the hope that it will be useful,f
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- General Public License for more details.
-
- You should have received a copy of the GNU AFFERO GENERAL PUBLIC LICENSE
- along with this library; if not, write to the Free Software
- Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-"""
 import sys
 import time
 import numpy as np
@@ -25,25 +8,7 @@ app = Flask(__name__)
 
 from telemetrix import telemetrix
 
-"""
-Run a motor to a relative position.
 
-Motor used to test is a NEMA-17 size - 200 steps/rev, 12V 350mA.
-And the driver is a TB6600 4A 9-42V Nema 17 Stepper Motor Driver.
-
-The driver was connected as follows:
-VCC 12 VDC
-GND Power supply ground
-ENA- Not connected
-ENA+ Not connected
-DIR- ESP32 GND
-DIR+ GPIO Pin 23 ESP32
-PUL- ESP32 GND
-PUL+ GPIO Pin 22 ESP32
-A-, A+ Coil 1 stepper motor
-B-, B+ Coil 2 stepper motor
-
-"""
 """
 const int StepX = 2;
 const int DirX = 5;
@@ -55,6 +20,7 @@ const int DirZ = 7;
 """
 
 MUX_SELECT_PINS = [7, 6, 5, 4]
+
 
 
 
@@ -80,16 +46,20 @@ TRESHOLD = [
 ]
 
 
-def serial_board():
-    print("    +-------------------+")
-    for i in range(9):
-        print(' ', 9 - i, "| ", end='')
-        for j in range(9):
-            c = mem[i][j]
-            print(c, end=' ')
+# pretty print 3 digit 2d array
+def serial_board(BoardMem, dim):
+    print("    +" + "-" * 46 + "+")
+    max_widths = [max(len(str(c)) for c in col) for col in zip(*BoardMem)]
+    for i in range(dim):
+        print(' ', dim - i -1, "| ", end='')
+        for j in range(dim):
+            c = BoardMem[i][j]
+            # Calculate the spacing needed based on maximum width of each column
+            spaces_needed = max_widths[j] - len(str(c))
+            print(' ' * spaces_needed, c, end=' ')
         print('|')
-    print("    +-------------------+")
-    print("      a b c d e f g h i")
+    print("    +" + "-" * 46 + "+")
+    print("        " + "    ".join(str(i) for i in range(dim)))
 
 #PIN_MODE setting
     
@@ -137,25 +107,7 @@ channel = 0
 Nothing = 0
 WHITE = 1
 BLACK = 2
-
-
 """
-
-#pin, channel to x y pair
-
-location_dict = {
-    (0,0): (0,0),
-    (1,0): (1,0),
-    (2,0): (1,0),
-    (3,0): (1,0)
-}
-
-    
-
-def calc_xy(pin):
-    global channel
-    return location_dict[(pin, channel)]
-    #return (0,0)
 
 
 def read_val_callback(data):
@@ -165,26 +117,33 @@ def read_val_callback(data):
     global MUX_READ_VAL_TIME 
     global MUX_VAL_ACCUMULATE
 
+    #Store val to compute the averafe
     MUX_READ_VAL_TIME[data[CB_PIN]] += 1
     MUX_VAL_ACCUMULATE[data[CB_PIN]] += data[CB_VALUE]
 
     #PRINT OUT INFO
-    print(f"Pin: {data[CB_PIN]} Val: {data[CB_VALUE]}")
+    #print(f"Pin: {data[CB_PIN]} Val: {data[CB_VALUE]}")
 
 
-
+# motor call back function 
 def the_callback(data):
     global exit_flag
     date = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(data[2]))
     print(f'Motor {data[1]} relative  motion completed at: {date}.')
     exit_flag += 1
 
+
+#call back that print out the current position 
 def current_position_callback(data):
     print(f'current_position_callback returns {data[2]}\n')
 
+#call back that print out the target position
 def target_position_callback(data):
     print(f'target_position_callback returns {data[2]}')
 
+
+
+# step the stepper motor for a relative distance from its current position
 def step_relative(the_board:telemetrix, motor_num, target, speed):
 
     global exit_flag
@@ -220,10 +179,6 @@ def step_relative(the_board:telemetrix, motor_num, target, speed):
             board.shutdown()
             sys.exit(0)
     exit_flag = 0
-    
-
-    
-
     
 
 def reset(board, speed):
@@ -266,26 +221,8 @@ def electroMagnet_on():
 def electroMagnet_off():
     board2.digital_write(ELECTROMAGNET, 0)
 
-
-
-# instantiate telemetrix
-#board = telemetrix.Telemetrix(arduino_instance_id = 1)
-board2 = telemetrix.Telemetrix(arduino_instance_id= 2)
-
-board2.set_pin_mode_analog_input(0 , differential=0, callback=read_val_callback)
-#board2.set_pin_mode_analog_input(1 , differential=0, callback=read_val_callback)
-#board2.set_pin_mode_analog_input(2 , differential=3, callback=read_val_callback)
-
-board2.set_pin_mode_digital_output(ELECTROMAGNET)
-
-for select in MUX_SELECT_PINS:
-    board2.set_pin_mode_digital_output(select)
-
-
-
-
-
-def iterate():
+# check the sesnor matrix value and update board values accordingly
+def check_board_val():
 
     global BoardMem
     global MUX_VAL_ACCUMULATE
@@ -330,16 +267,25 @@ def iterate():
 
         
         for j in range(len(MUX_VAL_ACCUMULATE)):
-            avg = round(MUX_READ_VAL_TIME[j] / MUX_READ_VAL_TIME[j])
+            # get the average val
+            avg = round(MUX_VAL_ACCUMULATE[j] / MUX_READ_VAL_TIME[j])
+            # get the x, y position given iteration and pin 
             x, y = iteration_to_sesnor(i, j)
+            # get threshold
             black_upper, black_lower = TRESHOLD[x][y]
+            # get previous val
             prev = BoardMem[x][y]
+            # given threshold, prev and average, send change to webapp
             verifyCell(avg, prev, black_lower, black_upper)
+            # update
             BoardMem[x][y] = avg
+            # print out
             print(f"x: {x}, y:{y}, avg:{avg}")
-           
-        #MUX_VAL_ACCUMULATE = VAL_DEFAULT
-        #MUX_READ_VAL_TIME = VAL_DEFAULT
+
+
+        # reset counter vals   
+        MUX_VAL_ACCUMULATE = VAL_DEFAULT
+        MUX_READ_VAL_TIME = VAL_DEFAULT
 
         time.sleep(5)
 
@@ -347,14 +293,11 @@ def iterate():
         
             
             
-            
-
-
 """
 
-0 stands for nothing ~200 in raw
-1 stands for black ~176 in raw
-2 stands for white ~174 in raw
+0 stands for nothing ~ in raw
+1 stands for black ~ in raw
+2 stands for white ~ in raw
 webapp
 
 Responsible for sending message to 
@@ -387,11 +330,7 @@ def verifyCell(avg, prev, black_lower, black_upper):
             pass
         
 
-
-
-
-
-
+# transform mux select vals and output pin num to (x,y)
 
 def iteration_to_sesnor(iteration, mux_num):
     if mux_num % 2 == 1:
@@ -428,13 +367,25 @@ def iteration_to_sesnor(iteration, mux_num):
                 return (7, iteration + 5)
         
         
+#========================================functions end here=====================================#
 
 
-    
+# instantiate telemetrix
+#board = telemetrix.Telemetrix(arduino_instance_id = 1)
+board2 = telemetrix.Telemetrix(arduino_instance_id= 2)
+
+board2.set_pin_mode_analog_input(0 , differential=0, callback=read_val_callback)
+#board2.set_pin_mode_analog_input(1 , differential=0, callback=read_val_callback)
+#board2.set_pin_mode_analog_input(2 , differential=3, callback=read_val_callback)
+
+board2.set_pin_mode_digital_output(ELECTROMAGNET)
+
+for select in MUX_SELECT_PINS:
+    board2.set_pin_mode_digital_output(select)
 
 
 
-
+# init motors
 
 #motorX = board.set_pin_mode_stepper(interface=1, pin1=X_PULSE_PIN,
  #                                                pin2=X_DIRECTION_PIN)
@@ -442,14 +393,6 @@ def iteration_to_sesnor(iteration, mux_num):
 
 #motorY = board.set_pin_mode_stepper(interface=1, pin1=Y_PULSE_PIN,
   #                                               pin2=Y_DIRECTION_PIN)
-
-actionQ = [0,1,0,1]
-distance = [3, 3, -3, -3]
-actionIndex= 0
-
-
-
-
 
 
 
@@ -472,8 +415,7 @@ while True:
         
         #move(x,y, 800) 
 
-        iterate()
-
+        check_board_val()
         
         
         #resetX(board)
