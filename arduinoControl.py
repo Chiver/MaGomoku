@@ -100,7 +100,6 @@ x = 0
 y = 0
 exit_flag = 0
 channel = 0
-#y = 0
 
 
 """
@@ -294,19 +293,15 @@ def check_board_val():
             
             
 """
-
 0 stands for nothing ~ in raw
 1 stands for black ~ in raw
 2 stands for white ~ in raw
-webapp
-
-Responsible for sending message to 
+Responsible for sending message to webapp
 """
 def verifyCell(avg, prev, black_lower, black_upper):
 
     if prev == 0:
-        pass
-
+        return
     elif avg > black_upper:
         if prev >= black_lower and prev <= black_upper:
             # nothing to black
@@ -323,7 +318,7 @@ def verifyCell(avg, prev, black_lower, black_upper):
             pass
     else:
         if prev > black_upper:
-            # white  to nothing
+            # white to nothing
             pass
         elif prev >= black_lower:
             # white to black
