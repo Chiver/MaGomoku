@@ -228,7 +228,7 @@ def check_board_val():
     global MUX_READ_VAL_TIME
    
 
-    for i in range(5, 6):
+    for i in range(5, 7):
         sel_0 = i & 1
         sel_1 = (i >>1) & 1
         sel_2 = (i >>2) & 1

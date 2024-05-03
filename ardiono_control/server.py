@@ -18,6 +18,7 @@ import atexit
 import time 
 import numpy as np
 import sys
+import serial 
 
 """ ************************* GLOBAL VARIABLES ************************* """
 app = Flask(__name__)
@@ -49,6 +50,7 @@ Y_PULSE_PIN = 3
 Y_DIRECTION_PIN = 6
 
 
+
 # SENSOR: mux related 
 MUX_SELECT_PINS = [7, 6, 5, 4]
 VAL_DEFAULT = [0, 0]
@@ -56,17 +58,6 @@ ENABLE_PIN = 8
 # pin 5 4 3 2
 MUX_READ_VAL_TIME = [0, 0]
 MUX_VAL_ACCUMULATE = [0, 0]
-TRESHOLD = [
-    [(178, 183), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
-    [(180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
-    [(180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
-    [(180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
-    [(180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
-    [(180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
-    [(180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
-    [(180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
-    [(180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188), (180, 188)],
-]
 BoardMem = np.zeros(shape=(9,9), dtype="int")
 
 # API 
@@ -101,18 +92,32 @@ def move():
     x = request.args.get('x', 0)  # Default to 0 if not provided
     y = request.args.get('y', 0)  # Default to 0 if not provided
     a, b = int(x) * 2, int(y) * 2
-    speed = 800  
+    speed = 880
 
     # electroMagnet_on()
+
+
+    if a == 0:
+        stepX(board, 1, speed, 350)
+        stepY(board, b, speed, 495)
+        stepX(board, -1, speed, 0)
+        time.sleep(0.2)
+        stepX(board, 1, speed, 0)
+        stepY(board, -b, speed, -495)
+        stepX(board, -1, speed, -350)
+    else:
+        print(f"{a}, {b}")
+        stepX(board, a-1, speed, 350)
+        stepY(board, b, speed, 495)
+        stepX(board, 1, speed, 0)
+        time.sleep(0.2)
+        stepX(board, -1, speed, 0)
+        stepY(board, -b, speed, -495)
+        stepX(board, -a+1, speed, -350)
     
-    print(f"{a}, {b}")
-    stepX(board, a-1, speed, 495)
-    stepY(board, b, speed, 495)
-    stepX(board, 1, speed, 0)
-    time.sleep(0.2)
-    stepY(board, -b, speed, -495)
-    stepX(board, -1, speed, 0)
-    stepX(board, -a+1, speed, -495)
+
+    
+
 
     # electroMagnet_off()
 
@@ -212,7 +217,10 @@ def fire_placement_event(prev, curr, x, y):
     response = requests.get(DJANGO_ENDPOINT_URL, params=params)
 
     # Print the response text (or do something else with it)
-    print(f"Called django endpoint to fire placement event: \n{response.text}")
+    if(response.json()["status"] == "error"): 
+        print("Error")
+    else: 
+        print(f"Called django endpoint to fire placement event: \n{response.text}")
 
 
 def verifyCell(avg, prev, black_lower, black_upper, x, y):
@@ -293,73 +301,38 @@ def iteration_to_sesnor(iteration, mux_num):
             return (-1, -1)
 
 
-def check_board_val(board2):
-    global BoardMem
-    global MUX_VAL_ACCUMULATE
-    global MUX_READ_VAL_TIME
-
-    for i in [4]:
-        
-        board2.digital_write(ENABLE_PIN, 0)
-        time.sleep(0.5)
-        sel_0 = i & 1
-        sel_1 = (i >>1) & 1
-        sel_2 = (i >>2) & 1
-        sel_3 = (i >>3) & 1
-
-        board2.digital_write(MUX_SELECT_PINS[0], sel_0)
-        board2.digital_write(MUX_SELECT_PINS[1], sel_1)
-        board2.digital_write(MUX_SELECT_PINS[2], sel_2)
-        board2.digital_write(MUX_SELECT_PINS[3], sel_3)
-        time.sleep(0.5)
-        #print(f"Selecting {sel_0} {sel_1} {sel_2} {sel_3} ")
-        board2.enable_analog_reporting(0)
-        board2.enable_analog_reporting(1)
-        time.sleep(0.5)
-        board2.disable_analog_reporting(0)
-        board2.disable_analog_reporting(1)
-        
-        for j in range(len(MUX_VAL_ACCUMULATE)):
-            # get the average val
-            avg = round(MUX_VAL_ACCUMULATE[j] / MUX_READ_VAL_TIME[j])
-            # get the x, y position given iteration and pin 
-            x, y = iteration_to_sesnor(i, j)
-            if x != -1:
-                # get threshold
-                black_upper, black_lower = TRESHOLD[x][y]
-                # get previous val
-                prev = BoardMem[x][y]
-                # given threshold, prev and average, send change to webapp
-                #verifyCell(avg, prev, black_lower, black_upper, x, y)
-                # update
-                BoardMem[x][y] = avg
-                # print out
-                #print(f"x: {x}, y:{y}, avg:{avg}, mux valL {MUX_VAL_ACCUMULATE[j]}")
-
-        # reset counter vals   
-        MUX_VAL_ACCUMULATE = [0, 0]
-        MUX_READ_VAL_TIME = [0, 0]
-        
-        board2.digital_write(ENABLE_PIN, 1)
-        time.sleep(0.5)
-    serial_board(BoardMem, 9)
-
     
 
 # CALLED IN NEW PROCESS: main function to check censors 
 def check_sensor(stop_event):
-    pass
-    # Initialize sensor arduino board
-    #board2 = telemetrix.Telemetrix(arduino_instance_id=2)
-    #board2.set_pin_mode_analog_input(0 , differential=0, callback=read_val_callback)
-    #board2.set_pin_mode_analog_input(1 , differential=0, callback=read_val_callback)
+    arduino = serial.Serial(port='COM4', baudrate=9600, timeout=.1)  
+    while True: 
+        data = arduino.readline()
+        splt = data.decode().split(' ')
+        if len(splt) == 4:
+            splt[-1] = splt[-1].strip()
+       
+            x = str(splt[0])
+            y = str(splt[1])
 
-    #board2.disable_analog_reporting(0)
-    #board2.disable_analog_reporting(1)
-    #while not stop_event.is_set():
-       # print("Calling check_board_val() to check sensor events") 
-       # check_board_val(board2)
-       # time.sleep(0.5)  # Sleep to simulate sensor checking delay
+            if splt[2] == "0":
+                event1 = F_EMPTY
+            elif splt[2] == "1":
+                event1 = F_WHITE
+            else:
+                event1 = F_BLACK
+
+
+            if splt[3] == "0":
+                event2 = F_EMPTY
+            elif splt[3] == "1":
+                event2 =  F_WHITE
+            else:
+                event2 = F_BLACK
+
+            fire_placement_event(event1, event2, x, y) 
+            print(splt)
+        time.sleep(0.1)  # Sleep to simulate sensor checking delay
 
 
 def stop_process():
@@ -383,14 +356,6 @@ def read_val_callback(data):
     #print(f"Pin: {data[CB_PIN]} Val: {data[CB_VALUE]}")
 
 
-# Turn on electro magnet 
-def electroMagnet_on():
-    board2.digital_write(ELECTROMAGNET, 1)
-
-
-# Turn off electro magnet 
-def electroMagnet_off():
-    board2.digital_write(ELECTROMAGNET, 0)
 
 
 
@@ -398,19 +363,23 @@ def electroMagnet_off():
 
 if __name__ == '__main__':
 
+   
+
     # Initialize gantry arduino board 
     board = telemetrix.Telemetrix(arduino_instance_id=1)
     motorY = board.set_pin_mode_stepper(interface=1, pin1=X_PULSE_PIN, pin2=X_DIRECTION_PIN)
     motorX = board.set_pin_mode_stepper(interface=1, pin1=Y_PULSE_PIN, pin2=Y_DIRECTION_PIN)
 
-    
+    motorZ = board.set
 
+    #stepY(board, 0, 850, -495 * 2)
+    
     # Initialize sensor checking process 
     sensor_process = Process(target=check_sensor, args=(stop_event,))
     sensor_process.start()
     print(f"Sensor checking process spawned: {sensor_process.pid}")
     atexit.register(stop_process)
 
-    # Initialize flask process 
+    #Initialize flask process 
     app.run(port=5000)
     
