@@ -370,7 +370,7 @@ if __name__ == '__main__':
     motorY = board.set_pin_mode_stepper(interface=1, pin1=X_PULSE_PIN, pin2=X_DIRECTION_PIN)
     motorX = board.set_pin_mode_stepper(interface=1, pin1=Y_PULSE_PIN, pin2=Y_DIRECTION_PIN)
 
-    motorZ = board.set
+    
 
     #stepY(board, 0, 850, -495 * 2)
     
